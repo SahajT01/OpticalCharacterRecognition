@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Text Extractor</title>
+<style>
+  .main-wrapper {
+    max-width: 80%;
+    margin: auto;
+    text-align: center;
+  }
+  .section {
+    border: 2px solid #ff5722;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 15px;
+    display: inline-block;
+  }
+  .display-area {
+    border: 2px dashed #ff5722;
+    border-radius: 8px;
+    text-align: center;
+    background-color: #f9f9f9;
+    overflow: auto;
+    padding: 10px;
+    margin-top: 10px;
+  }
+  button {
+    margin: 12px;
+    padding: 12px 24px;
+    background-color: #ff5722;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="main-wrapper">
+  <h1>Image Text Extractor</h1>
+  <div class="section" id="section1">
+    <div>Step 1</div>
+    <button onclick="document.getElementById('imageInput').click();">Upload Photo</button>
+    <input type="file" id="imageInput" style="display:none" onchange="processFile(event)">
+    <div class="display-area" id="display1"></div>
+  </div>
+  <div class="section" id="section2">
+    <div>Step 2</div>
+    <button id="processBtn">Extract Text</button>
+    <div class="display-area" id="display2"></div>
+  </div>
+  <div class="section" id="section3">
+    <div>Text Output</div>
+    <div class="display-area" id="display3"></div>
+  </div>
+</div>
+
+<script>
+
+function processFile(event) {
+  const imageFile = event.target.files[0];
+  if (!imageFile) {
+    return;
+  }
+  
+  // Display the selected image
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const imageSrc = e.target.result;
+    const displayArea = document.getElementById('display1');
+    displayArea.innerHTML = '<img src="' + imageSrc + '" alt="Uploaded Image" style="max-width:100%;height:auto;">';
+  };
+  reader.readAsDataURL(imageFile);
+}
+
+function requestOcrService(base64Image) {
+  const headers = new Headers();
+  headers.append("apikey", "K87323319888957");
+
+  const data = new FormData();
+  data.append("base64Image", base64Image);
+  data.append("scale", "true");
+
+  const config = {
+    method: "POST",
+    headers: headers,
+    body: data,
+    redirect: "follow"
+  };
+
+  fetch("https://api.ocr.space/parse/image", config)
+  .then(response => response.json())
+  .then(result => {
+    console.log(result);
+    const outputArea = document.getElementById('display3');
+    if(result.ParsedResults && result.ParsedResults.length > 0) {
+      let parsedText = result.ParsedResults[0].ParsedText.trim();
+      parsedText = parsedText.replace(/\s+/g, ' ').trim(); // Remove extra spaces and line breaks
+      outputArea.textContent = parsedText;
+    } else {
+      console.log("No text found.");
+      outputArea.textContent = result.ErrorMessage[0] || "OCR processing error.";
+    }
+    // Clear processing status
+    document.getElementById('display2').textContent = "";
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    document.getElementById('display3').textContent = "An error occurred.";
+    // Clear processing status
+    document.getElementById('display2').textContent = "";
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('processBtn').addEventListener('click', function() {
+    const imageInput = document.getElementById('imageInput');
+    if(imageInput.files.length > 0) {
+      const imageFile = imageInput.files[0];
+
+      // Show processing status in Step 2 box
+      const displayArea2 = document.getElementById('display2');
+      displayArea2.textContent = "Processing...";
+
+      // Read the file as base64 to send to the API
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64Image = e.target.result;
+        requestOcrService(base64Image);
+      };
+      reader.readAsDataURL(imageFile);
+
+    } else {
+      alert("Please upload an image first.");
+    }
+  });
+});
+
+</script>
+
+</body>
+</html>
